@@ -1,0 +1,62 @@
+name: CI Pipeline
+on:
+  pull_request:
+    branches: [develop, main]
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    services:
+      mongodb:
+        image: mongo:6.0
+        env:
+          MONGO_INITDB_ROOT_USERNAME: admin
+          MONGO_INITDB_ROOT_PASSWORD: password123
+        ports:
+          - 27017:27017
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+      - name: Install dependencies (backend)
+        working-directory: ./backend
+        run: npm install
+      - name: Run backend tests
+        working-directory: ./backend
+        env:
+          MONGODB_URI: mongodb://admin:password123@localhost:27017/healthapp?authSource=admin
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+        run: npm test
+      - name: Install dependencies (frontend-web)
+        working-directory: ./frontend-web
+        run: npm install
+      - name: Run frontend tests
+        working-directory: ./frontend-web
+        run: npm test
+      - name: Run ESLint (frontend-web)
+        working-directory: ./frontend-web
+        run: npm run lint
+      - name: Install dependencies (admin-dashboard)
+        working-directory: ./admin-dashboard
+        run: npm install
+      - name: Run admin dashboard tests
+        working-directory: ./admin-dashboard
+        run: npm test
+      - name: Run ESLint (admin-dashboard)
+        working-directory: ./admin-dashboard
+        run: npm run lint
+      - name: Build Docker images
+        run: docker-compose build --no-cache
+      - name: Security scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "health-app-backend:latest"
+          format: "table"
+          exit-code: "1"
