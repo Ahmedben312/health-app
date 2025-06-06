@@ -1,0 +1,16 @@
+{
+  "name": "health-app-load-testing",
+  "version": "1.0.0",
+  "description": "Load testing for Health App",
+  "scripts": {
+    "test:light": "artillery run scenarios/light-load.yml",
+    "test:medium": "artillery run scenarios/medium-load.yml",
+    "test:heavy": "artillery run scenarios/heavy-load.yml",
+    "test:stress": "artillery run scenarios/stress-test.yml",
+    "test:all": "./run-all-tests.sh",
+    "report": "artillery report"
+  },
+  "devDependencies": {
+    "artillery": "^2.0.0"
+  }
+}

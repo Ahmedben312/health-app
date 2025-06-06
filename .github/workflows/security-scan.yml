@@ -1,0 +1,31 @@
+name: Security Scan
+
+on:
+  schedule:
+    - cron: '0 0 * * 1' # Weekly on Monday
+  workflow_dispatch:
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'table'
+        exit-code: '1'
+        severity: 'CRITICAL,HIGH'
+
+    - name: Run npm audit
+      run: |
+        cd backend
+        npm audit --audit-level=high
+        cd ../frontend-web
+        npm audit --audit-level=high
+        cd ../admin-dashboard
+        npm audit --audit-level=high

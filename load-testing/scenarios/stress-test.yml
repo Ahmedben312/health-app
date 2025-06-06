@@ -1,0 +1,37 @@
+config:
+  target: 'http://localhost:5000'
+  phases:
+    - duration: 60
+      arrivalRate: 1
+      rampTo: 10
+      name: "Ramp up"
+    - duration: 300
+      arrivalRate: 10
+      rampTo: 500
+      name: "Stress test"
+  scenarios:
+    - name: "All Critical Paths"
+      flow:
+        - get:
+            url: "/health"
+        - post:
+            url: "/api/auth/login"
+            json:
+              email: "test@example.com"
+              password: "password123"
+        - get:
+            url: "/api/appointments"
+            headers:
+              Authorization: "Bearer {{ token }}"
+        - post:
+            url: "/api/appointments"
+            headers:
+              Authorization: "Bearer {{ token }}"
+            json:
+              doctorId: "64c9a4f1a3d8b85a747e2d14"
+              date: "2023-12-15T10:00:00Z"
+              reason: "Checkup"
+        - delete:
+            url: "/api/appointments/{{ appointmentId }}"
+            headers:
+              Authorization: "Bearer {{ token }}"

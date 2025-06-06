@@ -1,0 +1,81 @@
+name: Health App CI/CD
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    services:
+      mongodb:
+        image: mongo:6.0
+        ports:
+          - 27017:27017
+        env:
+          MONGO_INITDB_ROOT_USERNAME: admin
+          MONGO_INITDB_ROOT_PASSWORD: password123
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+
+    strategy:
+      matrix:
+        node-version: [18.x]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: |
+        cd backend
+        npm ci
+        cd ../frontend-web
+        npm ci
+        cd ../admin-dashboard
+        npm ci
+
+    - name: Run backend tests
+      working-directory: ./backend
+      run: npm test
+
+    - name: Run frontend-web tests
+      working-directory: ./frontend-web
+      run: npm run test
+
+    - name: Build backend
+      working-directory: ./backend
+      run: npm run build
+
+    - name: Build frontend-web
+      working-directory: ./frontend-web
+      run: npm run build
+
+    - name: Build admin-dashboard
+      working-directory: ./admin-dashboard
+      run: npm run build
+
+  deploy:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Deploy to production
+      env:
+        DOCKER_COMPOSE_PROD: ${{ secrets.DOCKER_COMPOSE_PROD }}
+      run: |
+        echo "$DOCKER_COMPOSE_PROD" > docker-compose.prod.yml
+        docker-compose -f docker-compose.prod.yml up -d
