@@ -1,0 +1,39 @@
+name: Deploy to Staging
+on:
+  push:
+    branches: [develop]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+      - name: Build and push Docker images
+        run: |
+          docker-compose build
+          docker-compose push
+      # - name: Deploy to staging server
+      #   uses: appleboy/ssh-action@v1.0.3
+      #   with:
+      #     host: ${{ secrets.STAGING_SERVER_HOST }}
+      #     username: ubuntu
+      #     key: ${{ secrets.STAGING_SSH_KEY }}
+      #     script: |
+      #       cd /path/to/staging/health-app
+      #       docker-compose pull
+      #       docker-compose up -d
+      # - name: Run integration tests
+      #   run: |
+      #     curl -f http://${{ secrets.STAGING_SERVER_HOST }}:5000/health
+      - name: Notify team
+        if: always()
+        uses: slackapi/slack-github-action@v1.26.0
+        with:
+          slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
+          channel-id: "deployments"
+          text: "Staging deployment ${{ job.status }} for health-app"
